@@ -1,11 +1,11 @@
 package com.ecommerce.zahir.entities;
 
+import java.util.List;
+
 import com.ecommerce.zahir.enums.RoleName;
 
 import jakarta.persistence.*;
 import lombok.*;
-
-
 
 @Entity
 @Table(name = "roles")
@@ -27,5 +27,8 @@ public class Role {
 
     @Column(length = 255)
     private String description;
-    
+
+    @OneToMany(mappedBy = "role")
+    private List<User> users;
+
 }
