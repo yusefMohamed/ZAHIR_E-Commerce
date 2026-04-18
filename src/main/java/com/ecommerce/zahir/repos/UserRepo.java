@@ -16,9 +16,11 @@ public interface UserRepo extends JpaRepository<User,Long> {
      * Finds a user by email address.
      * This is mainly used during dashboard login and security authentication.
      *
-     * @param email the user email
-     * @return an Optional containing the user if found
+     * email the user email
+     * return an Optional containing the user if found
      */
     Optional<User> findByEmail(String email);
+
+    boolean existsByEmail(String email);
 
 }

@@ -51,9 +51,9 @@ public class User {
     private boolean enabled=true;
 
     @Column(nullable = false)
-    private Boolean accountNonLocked = true;
+    private boolean accountNonLocked = true;
 
-    @ManyToOne(fetch = FetchType.LAZY)
+    @ManyToOne(fetch = FetchType.EAGER)
     @JoinColumn(name = "role_id", nullable = false)
     private Role role;
 

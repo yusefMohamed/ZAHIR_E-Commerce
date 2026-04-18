@@ -23,4 +23,12 @@ public interface RoleRepo extends JpaRepository<Role,Long> {
      * return an Optional containing the role if found
      */
     Optional<Role> findByName(RoleName name);
+
+    /**
+     * Checks whether a role with the given name already exists.
+     *
+     * param name the role name
+     * return true if the role exists, otherwise false
+     */
+    boolean existsByName(RoleName name);
 }
