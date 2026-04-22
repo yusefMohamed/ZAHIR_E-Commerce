@@ -20,4 +20,6 @@ public interface OrderRepo extends JpaRepository<Order,Long> {
      * return an Optional containing the order if found
      */
     Optional<Order> findByOrderNumber(String orderNumber);   
+
+    long countByCustomerId(Long customerId);
 }

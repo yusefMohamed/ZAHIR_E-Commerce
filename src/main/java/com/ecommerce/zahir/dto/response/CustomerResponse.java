@@ -23,7 +23,7 @@ public class CustomerResponse {
 
     private String governorate;
 
-    private Integer ordersCount;
+    private long ordersCount;
 
     private boolean returningCustomer;
 
