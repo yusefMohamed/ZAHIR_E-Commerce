@@ -9,8 +9,13 @@ import com.ecommerce.zahir.enums.VoucherType;
 import jakarta.persistence.*;
 import lombok.*;
 
+/**
+ * Represents a discount voucher that can be applied to orders.
+ * A voucher can be fixed-value or percentage-based.
+ */
+
 @Entity
-@Table(name="vouchers")
+@Table(name = "vouchers")
 @Setter
 @Getter
 @NoArgsConstructor
@@ -21,11 +26,13 @@ public class Voucher {
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long id;
 
+    // Unique code entered during checkout
     @Column(nullable = false, unique = true, length = 50)
     private String code;
-
+    
+    // Defines how the discount value should be interpreted
     @Enumerated(EnumType.STRING)
-    @Column(nullable = false, length= 50)
+    @Column(nullable = false, length = 50)
     private VoucherType voucherType;
 
     @Column(nullable = false, precision = 10, scale = 2)
@@ -60,5 +67,5 @@ public class Voucher {
     public void onUpdate() {
         this.updatedAt = LocalDateTime.now();
     }
-    
+
 }

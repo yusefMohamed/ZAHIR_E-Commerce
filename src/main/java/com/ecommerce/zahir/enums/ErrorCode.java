@@ -6,7 +6,7 @@ package com.ecommerce.zahir.enums;
  */
 
 public enum ErrorCode {
-    
+
     // General
     INTERNAL_ERROR,
 
@@ -22,5 +22,11 @@ public enum ErrorCode {
     INVALID_VOUCHER,
     OUT_OF_STOCK,
     INVALID_ORDER_STATE,
-    DUPLICATE_RESOURCE
+    DUPLICATE_RESOURCE,
+    INVALID_ROLE,
+    PASSWORD_MISMATCH,
+
+    UNAUTHORIZED_ACTION,
+    SELF_DEACTIVATION_NOT_ALLOWED,
+    MANAGER_ROLE_PROTECTED
 }

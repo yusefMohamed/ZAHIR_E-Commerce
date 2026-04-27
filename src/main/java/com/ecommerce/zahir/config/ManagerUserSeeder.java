@@ -1,6 +1,7 @@
 package com.ecommerce.zahir.config;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Component;
 
@@ -13,13 +14,14 @@ import com.ecommerce.zahir.repos.RoleRepo;
 import com.ecommerce.zahir.repos.UserRepo;
 
 @Component
-public class AdminUserSeeder implements CommandLineRunner {
+@Order(2)
+public class ManagerUserSeeder implements CommandLineRunner {
 
     private final UserRepo userRepo;
     private final RoleRepo roleRepo;
     private final PasswordEncoder passwordEncoder;
 
-    public AdminUserSeeder(UserRepo userRepo, RoleRepo roleRepo, PasswordEncoder passwordEncoder) {
+    public ManagerUserSeeder(UserRepo userRepo, RoleRepo roleRepo, PasswordEncoder passwordEncoder) {
 
         this.userRepo = userRepo;
         this.roleRepo = roleRepo;
@@ -28,31 +30,31 @@ public class AdminUserSeeder implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        String adminEmail = "yusef.mohamed.azmy@gmail.com";
-        String adminPhone = "01121218891";
-        String rawPassword = "admin123"; // fake password for dev only
+        String managerEmail = "yusef.mohamed.azmy@gmail.com";
+        String managerPhone = "01121218891";
+        String rawPassword = "123456"; // fake password for dev only
 
-        if (!userRepo.existsByEmail(adminEmail)) {
+        if (!userRepo.existsByEmail(managerEmail)) {
 
-            Role adminRole = roleRepo.findByName(RoleName.ROLE_ADMIN)
+            Role managerRole = roleRepo.findByName(RoleName.ROLE_MANAGER)
                     .orElseThrow(() -> new ResourceNotFoundException(
                             ErrorCode.ROLE_NOT_FOUND,
-                            "ROLE_ADMIN not found in database"));
+                            "ROLE_MANAGER not found in database"));
                             
-            User admin = new User();
-            admin.setFirstName("Youssef");
-            admin.setLastName("Mohamed");
-            admin.setEmail(adminEmail);
-            admin.setPhone(adminPhone);
+            User manager = new User();
+            manager.setFirstName("Youssef");
+            manager.setLastName("Mohamed");
+            manager.setEmail(managerEmail);
+            manager.setPhone(managerPhone);
 
             // IMPORTANT
-            admin.setPassword(passwordEncoder.encode(rawPassword));
+            manager.setPassword(passwordEncoder.encode(rawPassword));
 
-            admin.setRole(adminRole);
-            admin.setEnabled(true);
-            admin.setAccountNonLocked(true);
+            manager.setRole(managerRole);
+            manager.setEnabled(true);
+            manager.setAccountNonLocked(true);
 
-            userRepo.save(admin);
+            userRepo.save(manager);
         }
     }
 

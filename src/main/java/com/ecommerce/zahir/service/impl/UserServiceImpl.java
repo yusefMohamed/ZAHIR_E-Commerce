@@ -16,8 +16,13 @@ import com.ecommerce.zahir.exceptions.ResourceNotFoundException;
 import com.ecommerce.zahir.mapper.UserMapper;
 import com.ecommerce.zahir.repos.RoleRepo;
 import com.ecommerce.zahir.repos.UserRepo;
+import com.ecommerce.zahir.security.CustomUserDetails;
 import com.ecommerce.zahir.service.UserService;
 
+import jakarta.transaction.Transactional;
+
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
@@ -27,172 +32,229 @@ import java.util.List;
  * Service implementation for managing dashboard users.
  */
 @Service
+@Transactional
 public class UserServiceImpl implements UserService {
 
-    private final UserRepo userRepository;
-    private final RoleRepo roleRepository;
-    private final PasswordEncoder passwordEncoder;
+        private final UserRepo userRepository;
+        private final RoleRepo roleRepository;
+        private final PasswordEncoder passwordEncoder;
 
-    public UserServiceImpl(UserRepo userRepository,
-                           RoleRepo roleRepository,
-                           PasswordEncoder passwordEncoder) {
-        this.userRepository = userRepository;
-        this.roleRepository = roleRepository;
-        this.passwordEncoder = passwordEncoder;
-    }
-
-    /**
-     * Creates a new dashboard user.
-     */
-    @Override
-    public UserResponse createUser(CreateUserRequest request) {
-        if (userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException(
-                    ErrorCode.DUPLICATE_RESOURCE,
-                    "Email is already in use"
-            );
+        public UserServiceImpl(UserRepo userRepository,
+                        RoleRepo roleRepository,
+                        PasswordEncoder passwordEncoder) {
+                this.userRepository = userRepository;
+                this.roleRepository = roleRepository;
+                this.passwordEncoder = passwordEncoder;
         }
 
-        User user = UserMapper.toEntity(request);
+        /**
+         * Creates a new dashboard user.
+         */
+        @PreAuthorize("hasRole('MANAGER')")
+        @Override
+        public UserResponse createUser(CreateUserRequest request) {
 
-        RoleName roleName = parseRoleName(request.getRole());
+                String normalizedEmail = request.getEmail().trim().toLowerCase();
+                if (userRepository.existsByEmail(normalizedEmail)) {
+                        throw new DuplicateResourceException(
+                                        ErrorCode.DUPLICATE_RESOURCE,
+                                        "Email is already in use");
+                }
 
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.ROLE_NOT_FOUND,
-                        "Role not found: " + request.getRole()
-                ));
+                User user = UserMapper.toEntity(request);
 
-        user.setRole(role);
-        user.setPassword(passwordEncoder.encode(request.getPassword()));
-        user.setEnabled(true);
-        user.setAccountNonLocked(true);
+                RoleName roleName = parseRoleName(request.getRole());
 
-        User savedUser = userRepository.save(user);
+                Role role = roleRepository.findByName(roleName)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                ErrorCode.ROLE_NOT_FOUND,
+                                                "Role not found: " + request.getRole()));
 
-        return UserMapper.toResponse(savedUser);
-    }
+                user.setRole(role);
+                user.setPassword(passwordEncoder.encode(request.getPassword()));
+                user.setEnabled(true);
+                user.setAccountNonLocked(true);
+                user.setEmail(normalizedEmail);
 
-    /**
-     * Updates basic user data.
-     */
-    @Override
-    public UserResponse updateUser(Long userId, UpdateUserRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.USER_NOT_FOUND,
-                        "User not found with id: " + userId
-                ));
+                User savedUser = userRepository.save(user);
 
-        if (!user.getEmail().equals(request.getEmail())
-                && userRepository.existsByEmail(request.getEmail())) {
-            throw new DuplicateResourceException(
-                    ErrorCode.DUPLICATE_RESOURCE,
-                    "Email is already in use"
-            );
+                return UserMapper.toResponse(savedUser);
         }
 
-        RoleName roleName = parseRoleName(request.getRole());
+        /**
+         * Updates basic user data.
+         */
+        @Override
+        @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
+        public UserResponse updateUser(Long userId, UpdateUserRequest request) {
 
-        Role role = roleRepository.findByName(roleName)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.ROLE_NOT_FOUND,
-                        "Role not found: " + request.getRole()
-                ));
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                ErrorCode.USER_NOT_FOUND,
+                                                "User not found with id: " + userId));
 
-        user.setFirstName(request.getFirstName());
-        user.setLastName(request.getLastName());
-        user.setEmail(request.getEmail());
-        user.setPhone(request.getPhone());
-        user.setRole(role);
+                String normalizedEmail = request.getEmail().trim().toLowerCase();
+                String currentEmail = user.getEmail().trim().toLowerCase();
 
-        User updatedUser = userRepository.save(user);
+                if (!currentEmail.equals(normalizedEmail)
+                                && userRepository.existsByEmail(normalizedEmail)) {
+                        throw new DuplicateResourceException(
+                                        ErrorCode.DUPLICATE_RESOURCE,
+                                        "Email is already in use");
+                }
 
-        return UserMapper.toResponse(updatedUser);
-    }
+                RoleName requestedRoleName = parseRoleName(request.getRole());
+                RoleName currentUserRoleName = user.getRole().getName();
 
-    /**
-     * Updates enabled/locked status of a user.
-     * If the account is locked, it is automatically disabled.
-     */
-    @Override
-    public void updateUserStatus(Long userId, UpdateUserStatusRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.USER_NOT_FOUND,
-                        "User not found with id: " + userId
-                ));
+                boolean roleChanged = currentUserRoleName != requestedRoleName;
 
-        if (Boolean.FALSE.equals(request.getAccountNonLocked())) {
-            user.setAccountNonLocked(false);
-            user.setEnabled(false);
-        } else {
-            user.setAccountNonLocked(true);
-            user.setEnabled(Boolean.TRUE.equals(request.getEnabled()));
+                if (roleChanged && !isCurrentUserManager()) {
+                        throw new BusinessException(
+                                        ErrorCode.UNAUTHORIZED_ACTION,
+                                        "Only manager can change user roles");
+                }
+
+                Role role = roleRepository.findByName(requestedRoleName)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                ErrorCode.ROLE_NOT_FOUND,
+                                                "Role not found: " + request.getRole()));
+
+                user.setFirstName(request.getFirstName());
+                user.setLastName(request.getLastName());
+                user.setEmail(normalizedEmail);
+                user.setPhone(request.getPhone());
+                user.setRole(role);
+
+                User updatedUser = userRepository.save(user);
+
+                return UserMapper.toResponse(updatedUser);
         }
 
-        userRepository.save(user);
-    }
+        /**
+         * Updates enabled/locked status of a user.
+         * If the account is locked, it is automatically disabled.
+         */
+        @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
+        @Override
+        public UserResponse updateUserStatus(Long userId, UpdateUserStatusRequest request) {
 
-    /**
-     * Changes the password of a user.
-     */
-    @Override
-    public void changePassword(Long userId, UserPasswordChangeRequest request) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.USER_NOT_FOUND,
-                        "User not found with id: " + userId
-                ));
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                ErrorCode.USER_NOT_FOUND,
+                                                "User not found with id: " + userId));
 
-        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
-            throw new BusinessException(
-                    ErrorCode.INTERNAL_ERROR,
-                    "Password confirmation does not match"
-            );
+                User currentUser = getCurrentAuthenticatedUser();
+
+                if (currentUser.getId().equals(user.getId())) {
+                        throw new BusinessException(
+                                        ErrorCode.SELF_DEACTIVATION_NOT_ALLOWED,
+                                        "You cannot deactivate your own account");
+                }
+
+                if (user.getRole().getName() == RoleName.ROLE_MANAGER) {
+                        throw new BusinessException(
+                                        ErrorCode.MANAGER_ROLE_PROTECTED,
+                                        "Manager account cannot be deactivated");
+                }
+
+                if (Boolean.FALSE.equals(request.getAccountNonLocked())) {
+                        user.setAccountNonLocked(false);
+                        user.setEnabled(false);
+                } else {
+                        user.setAccountNonLocked(true);
+                        user.setEnabled(Boolean.TRUE.equals(request.getEnabled()));
+                }
+
+                userRepository.save(user);
+                return UserMapper.toResponse(user);
         }
 
-        user.setPassword(passwordEncoder.encode(request.getNewPassword()));
+        /**
+         * Changes the password of a user.
+         */
+        @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
+        @Override
+        public void changePassword(Long userId, UserPasswordChangeRequest request) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                ErrorCode.USER_NOT_FOUND,
+                                                "User not found with id: " + userId));
 
-        userRepository.save(user);
-    }
+                if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+                        throw new BusinessException(
+                                        ErrorCode.PASSWORD_MISMATCH,
+                                        "Password confirmation does not match");
+                }
 
-    /**
-     * Returns full details of a user by id.
-     */
-    @Override
-    public UserResponse getUserById(Long userId) {
-        User user = userRepository.findById(userId)
-                .orElseThrow(() -> new ResourceNotFoundException(
-                        ErrorCode.USER_NOT_FOUND,
-                        "User not found with id: " + userId
-                ));
+                user.setPassword(passwordEncoder.encode(request.getNewPassword()));
 
-        return UserMapper.toResponse(user);
-    }
-
-    /**
-     * Returns all users as lightweight summary responses.
-     */
-    @Override
-    public List<UserSummaryResponse> getAllUsers() {
-        return userRepository.findAll()
-                .stream()
-                .map(UserMapper::toSummary)
-                .toList();
-    }
-
-    /**
-     * Parses and validates role name string into RoleName enum.
-     */
-    private RoleName parseRoleName(String roleValue) {
-        try {
-            return RoleName.valueOf(roleValue);
-        } catch (IllegalArgumentException ex) {
-            throw new BusinessException(
-                    ErrorCode.INTERNAL_ERROR,
-                    "Invalid role value: " + roleValue
-            );
+                userRepository.save(user);
         }
-    }
+
+        /**
+         * Returns full details of a user by id.
+         */
+        @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
+        @Override
+        public UserResponse getUserById(Long userId) {
+                User user = userRepository.findById(userId)
+                                .orElseThrow(() -> new ResourceNotFoundException(
+                                                ErrorCode.USER_NOT_FOUND,
+                                                "User not found with id: " + userId));
+
+                return UserMapper.toResponse(user);
+        }
+
+        /**
+         * Returns all users as lightweight summary responses.
+         */
+        @PreAuthorize("hasAnyRole('MANAGER','ADMIN')")
+        @Override
+        public List<UserSummaryResponse> getAllUsers() {
+                return userRepository.findAll()
+                                .stream()
+                                .map(UserMapper::toSummary)
+                                .toList();
+        }
+
+        /**
+         * Parses and validates role name string into RoleName enum.
+         */
+        private RoleName parseRoleName(String roleValue) {
+                try {
+                        return RoleName.valueOf(roleValue.trim().toUpperCase());
+                } catch (IllegalArgumentException ex) {
+                        throw new BusinessException(
+                                        ErrorCode.INVALID_ROLE,
+                                        "Invalid role value: " + roleValue);
+                }
+        }
+
+        private User getCurrentAuthenticatedUser() {
+                Object principal = SecurityContextHolder.getContext()
+                                .getAuthentication()
+                                .getPrincipal();
+
+                if (principal instanceof CustomUserDetails customUserDetails) {
+                        return customUserDetails.getUser();
+                }
+
+                throw new BusinessException(
+                                ErrorCode.UNAUTHORIZED_ACTION,
+                                "Authenticated user not found");
+        }
+
+        private boolean isCurrentUserManager() {
+                Object principal = SecurityContextHolder.getContext()
+                                .getAuthentication()
+                                .getPrincipal();
+
+                if (principal instanceof CustomUserDetails customUserDetails) {
+                        return customUserDetails.getUser()
+                                        .getRole()
+                                        .getName() == RoleName.ROLE_MANAGER;
+                }
+
+                return false;
+        }
 }

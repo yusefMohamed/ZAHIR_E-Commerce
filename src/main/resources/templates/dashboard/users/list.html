@@ -1,0 +1,152 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Users | ZAHIR Dashboard</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <h2>ZAHIR</h2>
+
+        <a href="/dashboard">Dashboard</a>
+        <a href="/dashboard/users" sec:authorize="hasAnyRole('MANAGER','ADMIN')">Users</a>
+        <a href="#">Orders</a>
+        <a href="#">Perfumes</a>
+        <a href="#">Customers</a>
+        <a href="#">Vouchers</a>
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-btn">
+                Logout
+            </button>
+        </form>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            Users Management
+        </div>
+        <script>
+            setTimeout(() => {
+                const alerts = document.querySelectorAll('.alert');
+                alerts.forEach(a => a.style.display = 'none');
+            }, 3000);
+        </script>
+
+        <div class="content">
+
+            <div class="page-header">
+                <div>
+                    <h3>Users</h3>
+                    <p>Manage dashboard users and their roles.</p>
+                </div>
+
+                <a class="create-btn" href="/dashboard/users/create" sec:authorize="hasRole('MANAGER')">
+                    + Create New User
+                </a>
+            </div>
+            <div th:if="${successMessage}" class="alert success">
+                <p th:text="${successMessage}"></p>
+            </div>
+
+            <div th:if="${errorMessage}" class="alert error">
+                <p th:text="${errorMessage}"></p>
+            </div>
+
+            <div class="table-container">
+                <table class="data-table">
+                    <thead>
+                        <tr>
+                            <th>Full Name</th>
+                            <th>Email</th>
+                            <th>Role</th>
+                            <th>Status</th>
+                            <th>Update</th>
+                            <th>Activate / Deactivate</th>
+                            <th>Change Password</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr th:each="user : ${users}">
+
+                            <td th:text="${user.fullName}">User Name</td>
+                            <td th:text="${user.email}">email@test.com</td>
+
+                            <td>
+                                <span class="role-badge manager" th:if="${user.role == 'ROLE_MANAGER'}">Manager</span>
+
+                                <span class="role-badge admin" th:if="${user.role == 'ROLE_ADMIN'}">Admin</span>
+
+                                <span class="role-badge staff" th:if="${user.role == 'ROLE_STAFF'}">Staff</span>
+                            </td>
+
+                            <td>
+                                <span th:if="${user.enabled}" class="status active">Active</span>
+                                <span th:unless="${user.enabled}" class="status inactive">Inactive</span>
+                            </td>
+
+                            <!-- Update -->
+                            <td>
+                                <a sec:authorize="hasRole('MANAGER')" class="action-btn update"
+                                    th:href="@{/dashboard/users/{id}/edit(id=${user.id})}">
+                                    Update
+                                </a>
+
+                                <a sec:authorize="hasRole('ADMIN')" th:if="${user.role != 'ROLE_MANAGER'}"
+                                    class="action-btn update" th:href="@{/dashboard/users/{id}/edit(id=${user.id})}">
+                                    Update
+                                </a>
+                            </td>
+
+                            <!-- Activate / Deactivate -->
+                            <td sec:authorize="hasAnyRole('MANAGER','ADMIN')">
+
+                                <form th:if="${user.role != 'ROLE_MANAGER'}"
+                                    th:action="@{/dashboard/users/{id}/toggle-status(id=${user.id})}" method="post">
+
+                                    <input type="hidden" name="enabled" th:value="${!user.enabled}" />
+
+                                    <button th:if="${user.enabled}" class="action-btn danger"
+                                        onclick="return confirm('Are you sure you want to deactivate this user?')">
+                                        Deactivate
+                                    </button>
+
+                                    <button th:unless="${user.enabled}" class="action-btn success">
+                                        Activate
+                                    </button>
+                                </form>
+
+                                <span class="protected-label" th:if="${user.role == 'ROLE_MANAGER'}">
+                                    Protected
+                                </span>
+                            </td>
+
+                            <!-- Change Password -->
+                            <td sec:authorize="hasAnyRole('MANAGER','ADMIN')">
+
+                                <a th:if="${user.role != 'ROLE_MANAGER'}" class="action-btn update"
+                                    th:href="@{/dashboard/users/{id}/change-password(id=${user.id})}">
+                                    Password
+                                </a>
+
+                                <span class="protected-label" th:if="${user.role == 'ROLE_MANAGER'}">
+                                    Protected
+                                </span>
+                            </td>
+
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>

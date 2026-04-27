@@ -1,0 +1,58 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZAHIR Dashboard</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+
+<body>
+
+    <!-- Sidebar -->
+    <div class="sidebar">
+        <h2>ZAHIR</h2>
+
+        <a href="/dashboard">Dashboard</a>
+        <a href="/dashboard/users" sec:authorize="hasAnyRole('MANAGER','ADMIN')">Users</a>
+        <a href="#">Orders</a>
+        <a href="#">Perfumes</a>
+        <a href="#">Customers</a>
+        <a href="#">Vouchers</a>
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-btn">
+                Logout
+            </button>
+        </form>
+    </div>
+
+    <!-- Main -->
+    <div class="main">
+        <div class="topbar">
+            Welcome to Dashboard
+        </div>
+
+        <div class="content">
+            <h3>Dashboard Overview</h3>
+
+            <div class="card" sec:authorize="hasAnyRole('MANAGER','ADMIN')">
+                <h4>Total Users</h4>
+                <p th:text="${totalUsers}">0</p>
+            </div>
+
+            <div class="card">
+                <h4>Total Orders</h4>
+                <p>--</p>
+            </div>
+
+            <div class="card">
+                <h4>Total Customers</h4>
+                <p>--</p>
+            </div>
+        </div>
+    </div>
+
+</body>
+
+</html>

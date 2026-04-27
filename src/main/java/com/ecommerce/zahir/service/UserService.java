@@ -18,7 +18,7 @@ public interface UserService {
 
     UserResponse updateUser(Long userId, UpdateUserRequest request);
 
-    void updateUserStatus(Long userId, UpdateUserStatusRequest request);
+    UserResponse updateUserStatus(Long userId, UpdateUserStatusRequest request);
 
     void changePassword(Long userId, UserPasswordChangeRequest request);
 

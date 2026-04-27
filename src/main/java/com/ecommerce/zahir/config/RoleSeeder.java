@@ -1,6 +1,7 @@
 package com.ecommerce.zahir.config;
 
 import org.springframework.boot.CommandLineRunner;
+import org.springframework.core.annotation.Order;
 import org.springframework.stereotype.Component;
 /**
  * Seeds default role data when the application starts.
@@ -9,13 +10,15 @@ import org.springframework.stereotype.Component;
 import com.ecommerce.zahir.entities.Role;
 import com.ecommerce.zahir.enums.RoleName;
 import com.ecommerce.zahir.repos.RoleRepo;
+
 @Component
-public class RoleSeeder implements CommandLineRunner{
-    
+@Order(1)
+public class RoleSeeder implements CommandLineRunner {
+
     private final RoleRepo roleRepo;
-    
-    public RoleSeeder(RoleRepo roleRepo){
-        this.roleRepo= roleRepo;
+
+    public RoleSeeder(RoleRepo roleRepo) {
+        this.roleRepo = roleRepo;
     }
 
     /**
@@ -32,15 +35,20 @@ public class RoleSeeder implements CommandLineRunner{
     }
 
     @Override
-    public void run(String... args){
+    public void run(String... args) {
 
-        if (!roleRepo.existsByName(RoleName.ROLE_ADMIN)){
+        if (!roleRepo.existsByName(RoleName.ROLE_MANAGER)) {
+
+            seedRole(RoleName.ROLE_MANAGER, "Manager with highest dashboard permissions");
+        }
+
+        if (!roleRepo.existsByName(RoleName.ROLE_ADMIN)) {
 
             seedRole(RoleName.ROLE_ADMIN, "Administrator with full dashboard access");
         }
 
-        if (!roleRepo.existsByName(RoleName.ROLE_STAFF)){
-            
+        if (!roleRepo.existsByName(RoleName.ROLE_STAFF)) {
+
             seedRole(RoleName.ROLE_STAFF, "Staff member with limited dashboard access");
         }
     }

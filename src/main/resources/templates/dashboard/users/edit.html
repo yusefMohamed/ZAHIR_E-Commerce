@@ -1,0 +1,108 @@
+<!DOCTYPE html>
+<html lang="en" xmlns:th="http://www.thymeleaf.org" xmlns:sec="http://www.thymeleaf.org/extras/spring-security">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Edit User | ZAHIR Dashboard</title>
+    <link rel="stylesheet" href="/css/dashboard.css">
+</head>
+
+<body>
+
+    <div class="sidebar">
+        <h2>ZAHIR</h2>
+
+        <a href="/dashboard">Dashboard</a>
+        <a href="/dashboard/users" sec:authorize="hasAnyRole('MANAGER','ADMIN')">Users</a>
+        <a href="#">Orders</a>
+        <a href="#">Perfumes</a>
+        <a href="#">Customers</a>
+        <a href="#">Vouchers</a>
+        <form th:action="@{/logout}" method="post" class="logout-form">
+            <button type="submit" class="logout-btn">
+                Logout
+            </button>
+        </form>
+    </div>
+
+    <div class="main">
+        <div class="topbar">
+            Edit User
+        </div>
+
+        <div class="content">
+
+            <div class="form-card">
+                <h3>Edit User</h3>
+
+                <form th:action="@{/dashboard/users/{id}/edit(id=${userId})}" th:object="${user}" method="post">
+
+                    <div class="form-error" th:if="${#fields.hasGlobalErrors()}">
+                        <p th:each="err : ${#fields.globalErrors()}" th:text="${err}"></p>
+                    </div>
+
+                    <div class="form-group">
+                        <label>First Name</label>
+                        <input type="text" th:field="*{firstName}">
+                        <small th:if="${#fields.hasErrors('firstName')}" th:errors="*{firstName}"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Last Name</label>
+                        <input type="text" th:field="*{lastName}">
+                        <small th:if="${#fields.hasErrors('lastName')}" th:errors="*{lastName}"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Email</label>
+                        <input type="email" th:field="*{email}">
+                        <small th:if="${#fields.hasErrors('email')}" th:errors="*{email}"></small>
+                    </div>
+
+                    <div class="form-group">
+                        <label>Phone</label>
+                        <input type="text" th:field="*{phone}">
+                        <small th:if="${#fields.hasErrors('phone')}" th:errors="*{phone}"></small>
+                    </div>
+
+                    <!-- Manager can edit role -->
+                    <div class="form-group" sec:authorize="hasRole('MANAGER')">
+                        <label>Role</label>
+                        <select th:field="*{role}">
+                            <option value="">Select role</option>
+                            <option value="ROLE_MANAGER">Manager</option>
+                            <option value="ROLE_ADMIN">Admin</option>
+                            <option value="ROLE_STAFF">Staff</option>
+                        </select>
+                        <small th:if="${#fields.hasErrors('role')}" th:errors="*{role}"></small>
+                    </div>
+
+                    <!-- Admin can see role but cannot edit it -->
+                    <div class="form-group" sec:authorize="hasRole('ADMIN') and !hasRole('MANAGER')">
+                        <label>Role</label>
+
+                        <select th:field="*{role}" disabled>
+                            <option value="ROLE_MANAGER">Manager</option>
+                            <option value="ROLE_ADMIN">Admin</option>
+                            <option value="ROLE_STAFF">Staff</option>
+                        </select>
+
+                        <!-- disabled fields are not submitted, so we send the role using hidden input -->
+                        <input type="hidden" th:field="*{role}" />
+                    </div>
+
+                    <div class="form-actions">
+                        <button type="submit" class="create-btn">Save Changes</button>
+                        <a href="/dashboard/users" class="cancel-btn">Cancel</a>
+                    </div>
+
+                </form>
+            </div>
+
+        </div>
+    </div>
+
+</body>
+
+</html>
